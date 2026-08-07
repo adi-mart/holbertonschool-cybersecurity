@@ -4,7 +4,7 @@ if [ ! -d "$TRUC" ]; then
 	exit 1
 fi
 mkdir -p "$TRUC/backups"
-find $TRUC -type f -name "*.log" | while read -r file; do
+for file in "$TRUC"/*.log; do
 	if [ $(stat -c%s "$file") -gt 1024 ]; then
 		gzip "$file"
 		mv "$file.gz" "$TRUC/backups"
