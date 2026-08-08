@@ -1,3 +1,2 @@
 #!/bin/bash
-file=$1
-grep '\$1\$' "$file" | cut -d: -f1
+grep '\$1\$' "$1" | cut -d: -f1
