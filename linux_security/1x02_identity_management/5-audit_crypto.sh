@@ -1,2 +1,2 @@
 #!/bin/bash
-grep '\$1\$' "$1" | cut -d: -f1
+awk -F: '$2 ~ /^\$1\$/ {print $1}' "$1"
