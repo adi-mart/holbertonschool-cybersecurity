@@ -4,7 +4,7 @@ params=("PermitRootLogin" "PasswordAuthentication")
 
 edit_sshd_config(){
 	for PARAM in "${params[@]}"; do
-		sed -i 's/^#\?[[:space:]]*'"$PARAM"'.*/'"$PARAM"' no/' "$file"
+		sed -i 's/^#\?[[:space:]]*'"$PARAM"'.*/"$PARAM" no/' "$file"
 	done
 	sed -i 's/^#\?[[:space:]]*'PubkeyAuthentication'.*/PubkeyAuthentication yes/' "$file"
 }
