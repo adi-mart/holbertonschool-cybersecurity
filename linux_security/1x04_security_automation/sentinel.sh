@@ -32,4 +32,24 @@ check_integrity() {
 	done
 }
 
-check_integrity 
+check_integrity
+
+check_ports() {
+	PORT=$(ss -tln | awk 'NR>1 {split($4,a,":"); print a[2] }')
+	for port in "${PORT}"; do
+		ALLOWED=false
+		for allowed_port in "${ALLOWED_PORTS[@]}"; do
+			if [ "$port" = "${allowed_port}" ]; then
+				ALLOWED=true
+				break
+			fi
+		done
+			if [ "$ALLOWED" = false ]; then
+				PID=$(ss -lptn "sport = :$port" | grep -oP 'pid=\K[0-9]+')
+				kill -9 "$PID" 
+				echo "ALERT: Killed rogue process on port $PORT"
+			fi
+	done
+}
+
+check_ports
