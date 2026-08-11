@@ -15,5 +15,21 @@ check_services() {
 		fi
 	done 
 	}
-
 check_services
+
+
+check_integrity() {
+	for file in "${FILES_TO_WATCH[@]}"; do
+		GOLDEN="/var/backups/sentinel/$(basename "$file").gold"
+		LIVE_HASH=$(md5sum "$file"| awk '{print $1}')
+		GOLD_HASH=$(md5sum "$GOLDEN"| awk '{print $1}')
+			if [ "${LIVE_HASH}" != "$GOLDEN" ]; then
+				cp "$GOLDEN" "$file"
+				echo "FIXED: Restored $file"
+			else
+				echo "OK: $file integrity verified"
+			fi
+	done
+}
+
+check_integrity 
