@@ -9,7 +9,7 @@ log() {
   local details="$4"
 	local timestamp
 
-	timestamp=$(date -u +"%FT%TZ")
+	timestamp=$(date -u +%FT%TZ)
 
 	echo "{\"timestamp\": \"$timestamp\", \"component\": \"$component\", \"target\": \"$target\", \"status\": \"$status\", \"details\": \"$details\"}" >> /var/log/sentinel.log
 }
