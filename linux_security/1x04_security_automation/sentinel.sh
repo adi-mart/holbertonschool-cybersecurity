@@ -1,16 +1,33 @@
 #!/bin/bash
 [ -f "sentinel.conf" ] || exit 1; source "sentinel.conf"; [ -n "${SERVICES+x}" ] && [ -n "${FILES_TO_WATCH+x}" ] || exit 1
 
+log() {
+
+  local component="$1"
+  local target="$2"
+  local status="$3"
+  local details="$4"
+	local timestamp
+
+	timestamp=$(date -u +"%FT%TZ")
+
+	echo "{\"timestamp\": \"$timestamp\", \"component\": \"$component\", \"target\": \"$target\", \"status\": \"$status\", \"details\": \"$details\"}" >> /var/log/sentinel.log
+}
+
+
 check_services() {
 	for service in "${SERVICES[@]}"; do
 		if pgrep -f "$service"; then 
 			echo "OK: $service is running"
+			log "SERVICE" "$service" "OK" "$service is running"
 		else
 			eval "$service" 
 			if pgrep -f "$service"; then
 				echo "FIXED: Restarted $service"
+				log "SERVICE" "$service" "FIXED" "Restarted $service"
 			else
 				echo "Error "
+				log "SERVICE" "$service" "Error " 
 			fi
 		fi
 	done 
@@ -26,8 +43,10 @@ check_integrity() {
 			if [ "${LIVE_HASH}" != "$GOLDEN" ]; then
 				cp "$GOLDEN" "$file"
 				echo "FIXED: Restored $file"
+				log "INTEGRITY" "$file" "FIXED" "Restored $file"
 			else
 				echo "OK: $file integrity verified"
+				log "INTEGRITY" "$file" "OK" "$file integrity verified"
 			fi
 	done
 }
@@ -35,21 +54,19 @@ check_integrity() {
 check_integrity
 
 check_ports() {
-	PORT=$(ss -tln | awk 'NR>1 {split($4,a,":"); print a[2] }')
-	for port in "${PORT}"; do
-		ALLOWED=false
-		for allowed_port in "${ALLOWED_PORTS[@]}"; do
-			if [ "$port" = "${allowed_port}" ]; then
-				ALLOWED=true
-				break
-			fi
-		done
-			if [ "$ALLOWED" = false ]; then
-				PID=$(ss -lptn "sport = :$port" | grep -oP 'pid=\K[0-9]+')
-				kill -9 "$PID" 
-				echo "ALERT: Killed rogue process on port $PORT"
-			fi
-	done
+    for port in $(ss -lntp | awk 'NR>1{split($4, a, ":"); print a[2]}'); do
+        allowed=false
+        for allowed_port in "${ALLOWED_PORTS[@]}"; do
+            if [ "$port" = "$allowed_port" ]; then
+                allowed=true
+            fi
+        done
+        if [ "$allowed" = false ]; then
+            ss -K sport = :$port &>/dev/null
+            echo "ALERT: Killed rogue process on port $port"
+            log "PORT" "$port" "ALERT" "Killed rogue process on port $port"
+        fi
+    done
 }
 
 check_ports
