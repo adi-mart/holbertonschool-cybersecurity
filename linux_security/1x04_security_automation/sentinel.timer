@@ -1,3 +1,5 @@
 [Timer]
 OnUnitActiveSec=5min
 Unit=sentinel.service
+
+[Install]
