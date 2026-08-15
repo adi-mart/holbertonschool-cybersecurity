@@ -186,8 +186,8 @@ Le fichier `config/harden.cfg` centralise les variables importantes :
 ```bash
 LOG_FILE="/var/log/hardening.log"
 SSH_PORT="2222"
-ALLOW_HTTP="true"
-ALLOW_HTTPS="true"
+ALLOW_HTTP="80"
+ALLOW_HTTPS="443"
 FIREWALL_RULES_FILE="/etc/hardening/firewall.rules"
 SYSCTL_FILE="/etc/sysctl.conf"
 SSHD_CONFIG_FILE="/etc/ssh/sshd_config"
