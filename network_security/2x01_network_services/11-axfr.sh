@@ -1,2 +1,2 @@
 #!/bin/bash
-dig "$1" "@$2" axfr
+dig "$1" "@$2" AXFR
