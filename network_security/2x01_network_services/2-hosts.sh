@@ -1,2 +1,2 @@
 #!/bin/bash
-grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+[[:space:]]+.*localhost' /etc/hosts | awk '{print $1}' | head -n 1
+awk '/localhost/' /etc/hosts | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1\}'; printf "%s"
