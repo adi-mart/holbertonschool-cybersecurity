@@ -1,2 +1,2 @@
 #!/bin/bash
-dig +nocmd "$1" txt +noall +answer
+dig -x "$1" +noall +answer
