@@ -1,0 +1,2 @@
+Nmap envoie plusieurs sondes au port 80 afin d'identifier le service et sa version
+Le serveur répond à ces sondes, ce qui permet à Nmap d'identifier le service HTTP comme nginx.
