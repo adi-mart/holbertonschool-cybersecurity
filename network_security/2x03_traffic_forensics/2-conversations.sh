@@ -1,2 +1,2 @@
 #!/bin/bash
-tshark -r "$1" -z conv,tcp
+tshark -r "$1" -q -z conv,tcp
