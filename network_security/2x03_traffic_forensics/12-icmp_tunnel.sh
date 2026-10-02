@@ -1,2 +1,2 @@
 #!/bin/bash
-tshark -r "$1" -T fields -e icmp && data.len > 100
+tshark -r "$1" -Y 'icmp && frame.len>100' -T fields -e ip.src
