@@ -1,2 +1,2 @@
 #!/bin/bash
-tshark -r "$1" -T fields -e http.request.uri | grep -i "pass\|pwd\|password"
+tshark -r "$1" -Y "urlencoded-form" -T fields -e urlencoded-form.value
