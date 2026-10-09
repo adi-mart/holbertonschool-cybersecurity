@@ -1,3 +1,3 @@
 #!/bin/bash
-wg genkey | tee serveur_private | wg pubkey > serveur_public
-wg pubkey | tee server_public | wg genkey > server_private
+wg genkey | tee server_private | wg pubkey > server_public
+wg pubkey | tee client_public | wg genkey > client_private
