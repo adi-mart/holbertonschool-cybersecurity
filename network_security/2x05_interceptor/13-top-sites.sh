@@ -1,2 +1,2 @@
 #!/bin/bash
-grep -i /var/log/squid/access\.log | sort | uniq -c | sort -nr | head  -10
+grep -i * access\.log  | sort | uniq -c | sort -nr | head  -10
