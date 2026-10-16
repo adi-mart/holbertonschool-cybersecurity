@@ -1,2 +1,2 @@
 #!/bin/bash
-grep "*.log" /var/log/squid/access\.log | sort | uniq -c | sort -nr | head  -10
+grep /var/log/squid/access.log | awk '{print $7}' | sort | uniq -c | sort -nr | head  -10
