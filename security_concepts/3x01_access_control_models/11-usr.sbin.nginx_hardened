@@ -1,0 +1,36 @@
+profile /usr/sbin/nginx /usr/sbin/nginx_hardened {
+
+    # 1. Nginx executable: read and memory-map for execution
+	  /usr/sbin/nginx mr,
+
+    # 2. Nginx configuration
+    /etc/nginx/ r,
+    /etc/nginx/** r,
+
+    # 3. Static web content
+    /usr/share/nginx/html/ r,
+    /usr/share/nginx/html/** r,
+
+    # 4. Nginx logs
+    /var/log/nginx/ rw,
+    /var/log/nginx/** w,
+
+    # 5. SecureHealth plugin configuration
+    /opt/securehealth/plugin.conf r,
+
+    # 6. SecureHealth plugin data
+    /opt/securehealth/data/ r,
+    /opt/securehealth/data/** r,
+
+    # 7. Network access: TCP and UDP
+    network inet stream,
+    network inet dgram,
+
+
+    # Runtime PID file; adapt if nginx.conf uses another path
+    /run/nginx.pid rw,
+
+    # TLS certificates. Restrict private-key access to the portal's
+    # actual certificate/key paths in production.
+    /etc/ssl/certs/** r,
+}
