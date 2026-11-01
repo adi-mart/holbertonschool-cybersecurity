@@ -171,8 +171,8 @@ if [ -f "$VSFTPD_CONF" ]; then
     set_option "$VSFTPD_CONF" xferlog_enable "=" YES
     # Fixed passive range so the firewall can allow it
     set_option "$VSFTPD_CONF" pasv_enable "=" YES
-    set_option "$VSFTPD_CONF" pasv_min_port "=" 40000
-    set_option "$VSFTPD_CONF" pasv_max_port "=" 40100
+    set_option "$VSFTPD_CONF" pasv_min_port "=" 30000
+		set_option "$VSFTPD_CONF" pasv_max_port "=" 30100
 
     # Only Finance accounts may log in (members + users whose primary group is finance)
     FINANCE_USERS="$( {
