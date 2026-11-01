@@ -1,177 +1,177 @@
-# VPN DESIGN : LogiCorp Gateway
+# VPN DESIGN: LogiCorp Gateway
 
-## 1. Objectifs
+## 1. Objectives
 
-| Besoin | Gap couvert |
+| Need | Gap covered |
 |---|---|
-| Les comptables distants déposent leurs factures en FTP **sans changer leur logiciel** | ACC-05, ENC-01 (contrainte métier) |
-| Les administrateurs gèrent la passerelle et les serveurs sans exposer SSH à Internet | ACC-02, ACC-03 |
-| Un seul point d'entrée chiffré et authentifié depuis Internet | ENC-02 |
+| Remote accountants upload their invoices over FTP **without changing their software** | ACC-05, ENC-01 (business constraint) |
+| Administrators manage the gateway and the servers without exposing SSH to the Internet | ACC-02, ACC-03 |
+| A single encrypted and authenticated entry point from the Internet | ENC-02 |
 
-## 2. Choix technologique : WireGuard
+## 2. Technology choice: WireGuard
 
-| Critère | WireGuard | OpenVPN |
+| Criterion | WireGuard | OpenVPN |
 |---|---|---|
-| Surface d'attaque | ~4 000 lignes de code, intégré au noyau Linux | Très volumineux, dépend d'OpenSSL |
-| Exposition | Silencieux : ne répond à aucun paquet sans clé valide, invisible aux scans | Répond aux handshakes TLS |
-| Cryptographie | Moderne et fixe (Curve25519, ChaCha20-Poly1305), pas de négociation à mal configurer | Configurable, donc risque de suites faibles |
-| Configuration | Un fichier par pair, quelques lignes | PKI complète (CA, certificats, CRL) |
-| Limites | Pas de MFA natif, pas d'annuaire utilisateur | MFA et LDAP possibles |
+| Attack surface | ~4,000 lines of code, built into the Linux kernel | Very large, depends on OpenSSL |
+| Exposure | Silent: answers no packet without a valid key, invisible to scans | Answers TLS handshakes |
+| Cryptography | Modern and fixed (Curve25519, ChaCha20-Poly1305), no negotiation to get wrong | Configurable, hence a risk of weak cipher suites |
+| Configuration | One file per peer, a few lines | Full PKI (CA, certificates, CRL) |
+| Limits | No native MFA, no user directory | MFA and LDAP possible |
 
-**Décision : WireGuard.** Pour une PME sans administrateur sécurité dédié depuis 10 ans, la simplicité réduit le risque d'erreur de configuration. L'absence de MFA est traitée en §7.
+**Decision: WireGuard.** For an SME that has had no dedicated security administrator for 10 years, simplicity reduces the risk of misconfiguration. The lack of MFA is handled in §7.
 
-## 3. Topologie
+## 3. Topology
 
-Topologie **remote access en étoile (hub-and-spoke)** : chaque client se connecte à la passerelle, et les clients ne communiquent pas entre eux.
+**Remote-access hub-and-spoke** topology: each client connects to the gateway, and clients do not communicate with each other.
 
 ```
-   Comptable (domicile)        Admin (domicile / astreinte)
-   192.168.1.x (box)           réseau quelconque
+   Accountant (home)           Admin (home / on-call)
+   192.168.1.x (router)        any network
           │                            │
-          │  UDP 51820 chiffré         │  UDP 51820 chiffré
+          │  UDP 51820 encrypted       │  UDP 51820 encrypted
           └──────────┐      ┌──────────┘
                      ▼      ▼
-              eth1 (WAN) ── Passerelle LogiCorp
+              eth1 (WAN) ── LogiCorp gateway
                      wg0 = 10.8.0.1/24
                      │
         ┌────────────┼──────────────────────┐
         ▼            ▼                      ▼
-   FTP 10.50.60.40   Passerelle :22    DB 10.50.50.50:22
-   (DMZ, VLAN 60)    (admins)          FTP 10.50.60.40:22 (admins)
+   FTP 10.50.60.40   Gateway :22      DB 10.50.50.50:22
+   (DMZ, VLAN 60)    (admins)         FTP 10.50.60.40:22 (admins)
       ▲
-      └── comptables uniquement
+      └── accountants only
 ```
 
-Il n'y a pas de VPN site-to-site : LogiCorp n'a qu'un site.
+There is no site-to-site VPN: LogiCorp has only one site.
 
-## 4. Adressage
+## 4. Addressing
 
-Subnet VPN : **`10.8.0.0/24`**, interface `wg0`.
+VPN subnet: **`10.8.0.0/24`**, interface `wg0`.
 
-Choix du subnet :
-- hors de l'espace interne `10.50.0.0/16` ;
-- hors du réseau du lab `10.42.0.0/16` ;
-- hors des plages des box domestiques (`192.168.0.x`, `192.168.1.x`), sans quoi le poste d'un comptable ne saurait pas si `192.168.1.10` désigne son imprimante ou une machine de LogiCorp.
+Subnet choice:
+- outside the internal space `10.50.0.0/16`;
+- outside the lab network `10.42.0.0/16`;
+- outside the ranges of home routers (`192.168.0.x`, `192.168.1.x`), otherwise an accountant's workstation could not tell whether `192.168.1.10` is their printer or a LogiCorp machine.
 
-| Plage | Usage |
+| Range | Use |
 |---|---|
-| `10.8.0.1` | Passerelle (`wg0`) |
-| `10.8.0.10 – 10.8.0.19` | Administrateurs (10 pairs max) |
-| `10.8.0.100 – 10.8.0.149` | Comptables (50 pairs max) |
-| reste | Réservé |
+| `10.8.0.1` | Gateway (`wg0`) |
+| `10.8.0.10 – 10.8.0.19` | Administrators (10 peers max) |
+| `10.8.0.100 – 10.8.0.149` | Accountants (50 peers max) |
+| rest | Reserved |
 
-Chaque pair a une **IP fixe**, attachée à sa clé publique (`AllowedIPs = 10.8.0.x/32` côté serveur). WireGuard rejette tout paquet du tunnel dont l'IP source ne correspond pas à la clé qui l'a chiffré. **Un comptable ne peut donc pas usurper une IP admin** : c'est ce qui rend fiables les règles firewall basées sur les plages (I5, F9, F10, F13).
+Each peer has a **fixed IP**, tied to its public key (`AllowedIPs = 10.8.0.x/32` on the server side). WireGuard rejects any packet from the tunnel whose source IP does not match the key that encrypted it. **An accountant therefore cannot spoof an admin IP**: this is what makes the firewall rules based on ranges reliable (I5, F9, F10, F13).
 
-## 5. Contrôle d'accès (qui accède à quoi)
+## 5. Access control (who accesses what)
 
-| Groupe | IP VPN | Accès autorisés | Règles | Tout le reste |
+| Group | VPN IP | Allowed access | Rules | Everything else |
 |---|---|---|---|---|
-| Comptables | `10.8.0.100–149` | FTP `10.50.60.40` : TCP 21 + 30000–30100 | F9, F10 | DROP |
-| Administrateurs | `10.8.0.10–19` | Passerelle TCP 22 ; DB et FTP TCP 22 | I5, F13 | DROP |
+| Accountants | `10.8.0.100–149` | FTP `10.50.60.40`: TCP 21 + 30000–30100 | F9, F10 | DROP |
+| Administrators | `10.8.0.10–19` | Gateway TCP 22; DB and FTP TCP 22 | I5, F13 | DROP |
 
-Aucun utilisateur VPN n'accède aux zones Office, Finance ou Guest, ni à Internet via le tunnel.
+No VPN user reaches the Office, Finance or Guest zones, nor the Internet through the tunnel.
 
 ## 6. Split tunnel
 
-**Décision : split tunnel.** Seul le trafic à destination de LogiCorp passe dans le tunnel :
+**Decision: split tunnel.** Only traffic destined for LogiCorp goes through the tunnel:
 
-| Pair | `AllowedIPs` côté client |
+| Peer | `AllowedIPs` (client side) |
 |---|---|
-| Comptable | `10.50.60.40/32` |
-| Administrateur | `10.8.0.1/32, 10.50.50.50/32, 10.50.60.40/32` |
+| Accountant | `10.50.60.40/32` |
+| Administrator | `10.8.0.1/32, 10.50.50.50/32, 10.50.60.40/32` |
 
-| | Split tunnel (retenu) | Full tunnel |
+| | Split tunnel (chosen) | Full tunnel |
 |---|---|---|
-| Navigation perso de l'utilisateur | Passe par sa propre box | Passe par LogiCorp (bande passante, responsabilité) |
-| Ce que le poste peut joindre via le tunnel | Uniquement les IP utiles | Tout, filtré par le firewall |
-| Risque | Le poste est connecté à Internet et au tunnel en même temps | Moins de risque de pont, mais charge et complexité |
+| User's personal browsing | Goes through their own router | Goes through LogiCorp (bandwidth, responsibility) |
+| What the workstation can reach through the tunnel | Only the necessary IPs | Everything, filtered by the firewall |
+| Risk | The workstation is connected to the Internet and to the tunnel at the same time | Less bridging risk, but load and complexity |
 
-Le firewall applique de toute façon le moindre privilège (§5). `AllowedIPs` est une **seconde couche** : même si une règle firewall était trop large, le client n'enverrait rien d'autre dans le tunnel.
+The firewall applies least privilege anyway (§5). `AllowedIPs` is a **second layer**: even if a firewall rule were too broad, the client would send nothing else into the tunnel.
 
-## 7. Authentification et gestion des clés
+## 7. Authentication and key management
 
-- **Une paire de clés par personne et par appareil.** Jamais de clé partagée : chaque connexion est attribuable (corrige le manque de traçabilité d'ACC-03).
-- **Clé pré-partagée (PSK)** par pair en plus : défense contre un futur cassage de Curve25519 (post-quantique).
-- La clé privée est générée **sur le poste du client** et ne quitte jamais le poste. Seule la clé publique est transmise à l'admin.
-- **Révocation** : suppression du bloc `[Peer]` sur la passerelle, puis `wg syncconf`. Effet immédiat. À faire le jour du départ d'un employé ou de la perte d'un appareil.
-- **Revue trimestrielle** des pairs actifs (`wg show` : date du dernier handshake). Un pair inactif depuis plus de 90 jours est supprimé.
-- **Pas de MFA natif** (limite de WireGuard). Mesures compensatoires :
-  - pairs admin : la clé VPN **et** une clé SSH sont nécessaires (deux secrets distincts) ;
-  - pairs comptables : la clé VPN **et** l'identifiant FTP sont nécessaires ; accès limité à un seul serveur.
-  - Évolution possible : un portail MFA en amont (ex. firezone, netbird). Hors périmètre de la semaine.
+- **One key pair per person and per device.** Never a shared key: each connection is attributable (fixes the lack of traceability in ACC-03).
+- **Pre-shared key (PSK)** per peer in addition: defence against a future break of Curve25519 (post-quantum).
+- The private key is generated **on the client's workstation** and never leaves it. Only the public key is sent to the admin.
+- **Revocation**: remove the `[Peer]` block on the gateway, then `wg syncconf`. Immediate effect. To be done on the day an employee leaves or a device is lost.
+- **Quarterly review** of active peers (`wg show`: last handshake date). A peer inactive for more than 90 days is removed.
+- **No native MFA** (a WireGuard limitation). Compensating measures:
+  - admin peers: the VPN key **and** an SSH key are required (two separate secrets);
+  - accountant peers: the VPN key **and** the FTP login are required; access is limited to a single server.
+  - Possible evolution: an MFA portal in front (e.g. firezone, netbird). Out of scope for this week.
 
-Configuration serveur (extrait) :
+Server configuration (excerpt):
 
 ```ini
 [Interface]
 Address    = 10.8.0.1/24
 ListenPort = 51820
-PrivateKey = <clé privée serveur>
+PrivateKey = <server private key>
 
 # Admin - J. Dupont - laptop
 [Peer]
-PublicKey    = <clé publique>
+PublicKey    = <public key>
 PresharedKey = <PSK>
 AllowedIPs   = 10.8.0.10/32
 
-# Compta - M. Martin - PC domicile
+# Accounting - M. Martin - home PC
 [Peer]
-PublicKey    = <clé publique>
+PublicKey    = <public key>
 PresharedKey = <PSK>
 AllowedIPs   = 10.8.0.100/32
 ```
 
-Le serveur n'a pas de `PostUp` avec iptables : le filtrage est entièrement géré par le ruleset nftables (FIREWALL_POLICY.md), pour avoir une seule source de vérité.
+The server has no `PostUp` with iptables: filtering is handled entirely by the nftables ruleset (FIREWALL_POLICY.md), to have a single source of truth.
 
 ---
 
-## 8. Legacy App : FTP
+## 8. Legacy App: FTP
 
-### 8.1 Contrainte
+### 8.1 Constraint
 
-Les comptables distants utilisent un logiciel qui **ne parle que FTP** et qui **ne peut pas être modifié**. FTP transmet identifiants et fichiers **en clair**. Exposé sur Internet (situation actuelle, D5), n'importe quel intermédiaire peut lire les factures et rejouer les mots de passe.
+The remote accountants use software that **only speaks FTP** and **cannot be modified**. FTP sends credentials and files **in cleartext**. Exposed on the Internet (current situation, D5), any intermediary can read the invoices and replay the passwords.
 
-### 8.2 Approche : tunneling
+### 8.2 Approach: tunneling
 
-Le logiciel est conservé tel quel, mais il ne voit plus Internet : il parle à `10.50.60.40`, une adresse qui n'est joignable **que dans le tunnel WireGuard**.
+The software is kept as is, but it no longer sees the Internet: it talks to `10.50.60.40`, an address that is reachable **only inside the WireGuard tunnel**.
 
 ```
-Logiciel compta ──FTP en clair──► wg0 (client) ══ chiffré ChaCha20 ══► wg0 (passerelle) ──FTP en clair──► FTP 10.50.60.40
-     (poste)                                         Internet                                (DMZ)
+Accounting software ──cleartext FTP──► wg0 (client) ══ ChaCha20 encrypted ══► wg0 (gateway) ──cleartext FTP──► FTP 10.50.60.40
+     (workstation)                                         Internet                                            (DMZ)
 ```
 
-- Sur Internet, on ne voit que de l'UDP 51820 chiffré : ENC-01 est corrigé sur le segment le plus exposé.
-- Le serveur FTP n'est plus joignable depuis le WAN (F3, et aucun DNAT).
-- Le seul changement côté utilisateur : activer le VPN, puis saisir `10.50.60.40` comme adresse du serveur.
+- On the Internet, only encrypted UDP 51820 is visible: ENC-01 is fixed on the most exposed segment.
+- The FTP server is no longer reachable from the WAN (F3, and no DNAT).
+- The only change on the user side: enable the VPN, then enter `10.50.60.40` as the server address.
 
-**Pourquoi pas FTPS ou SFTP ?** SFTP est un autre protocole que le logiciel ne supporte pas. FTPS dépend du support du client, inconnu à ce jour. Le tunnel fonctionne quel que soit le client. Si le logiciel supporte FTPS, on l'active **en plus** (défense en profondeur).
+**Why not FTPS or SFTP?** SFTP is a different protocol that the software does not support. FTPS depends on client support, which is unknown at this stage. The tunnel works whatever the client. If the software supports FTPS, it is enabled **in addition** (defence in depth).
 
-### 8.3 Pourquoi en DMZ
+### 8.3 Why in the DMZ
 
-FTP est un protocole ancien, en clair, et le serveur **reçoit des fichiers venus de l'extérieur**, potentiellement piégés. C'est le service le plus susceptible d'être compromis. On l'isole donc en DMZ : s'il est compromis, la règle **F4** l'empêche d'initier la moindre connexion vers Office, Finance, la Database ou Internet. L'attaquant ne peut ni rebondir (mouvement latéral) ni exfiltrer.
+FTP is an old, cleartext protocol, and the server **receives files from the outside**, potentially booby-trapped. It is the service most likely to be compromised. It is therefore isolated in the DMZ: if it is compromised, rule **F4** prevents it from initiating any connection to Office, Finance, the Database or the Internet. The attacker can neither pivot (lateral movement) nor exfiltrate.
 
-### 8.4 Durcissement du serveur vsftpd
+### 8.4 vsftpd server hardening
 
-| Paramètre | Valeur | Raison |
+| Parameter | Value | Reason |
 |---|---|---|
-| `listen_address` | `10.50.60.40` | N'écoute que sur son interface DMZ (aujourd'hui : `0.0.0.0`, audit §3) |
-| `anonymous_enable` | `NO` | Aucun accès sans compte |
-| `chroot_local_user` | `YES` | Chaque comptable est enfermé dans son répertoire |
-| `pasv_enable` / `pasv_min_port` / `pasv_max_port` | `YES` / `30000` / `30100` | Plage passive fixe, correspond à F10/F11 |
-| `port_enable` | `NO` | Mode actif désactivé : le serveur n'initie pas de connexion (cohérent avec F4) |
-| `userlist_enable` + `userlist_deny=NO` | liste blanche | Seuls les comptes comptables listés peuvent se connecter |
-| `xferlog_enable` / `log_ftp_protocol` | `YES` | Traçabilité des dépôts et retraits |
+| `listen_address` | `10.50.60.40` | Listens only on its DMZ interface (today: `0.0.0.0`, audit §3) |
+| `anonymous_enable` | `NO` | No access without an account |
+| `chroot_local_user` | `YES` | Each accountant is locked into their own directory |
+| `pasv_enable` / `pasv_min_port` / `pasv_max_port` | `YES` / `30000` / `30100` | Fixed passive range, matches F10/F11 |
+| `port_enable` | `NO` | Active mode disabled: the server does not initiate connections (consistent with F4) |
+| `userlist_enable` + `userlist_deny=NO` | allowlist | Only the listed accountant accounts can log in |
+| `xferlog_enable` / `log_ftp_protocol` | `YES` | Traceability of uploads and downloads |
 
-Les fichiers déposés sont analysés par antivirus (ClamAV) avant leur récupération par la Finance.
+Uploaded files are scanned by antivirus (ClamAV) before Finance retrieves them.
 
-### 8.5 Acceptation du risque résiduel
+### 8.5 Residual risk acceptance
 
-| Élément | Contenu |
+| Item | Content |
 |---|---|
-| **Risque résiduel** | Le FTP reste en clair **entre la passerelle et le serveur** (VLAN 60) et entre le serveur et la Finance (F11). Un attaquant déjà présent sur la passerelle ou dans la DMZ pourrait lire identifiants et factures. Un poste comptable compromis transmet ses fichiers piégés dans le tunnel |
-| **Probabilité** | Faible : il faut d'abord compromettre la passerelle ou la DMZ, toutes deux durcies et journalisées |
-| **Impact** | Élevé : données financières, identifiants FTP |
-| **Mesures compensatoires** | Tunnel chiffré sur Internet ; FTP isolé en DMZ sans connexion sortante (F4) ; accès VPN limité au groupe compta (F9, F10) ; chroot + liste blanche ; logs FTP et firewall ; antivirus sur les dépôts ; identifiants FTP distincts de tout autre mot de passe |
-| **Propriétaire du risque** | Direction de LogiCorp (CEO), sur recommandation de l'équipe sécurité |
-| **Date de revue** | 6 mois après le déploiement, ou immédiatement en cas d'incident |
-| **Plan de sortie** | Demander à l'éditeur du logiciel le support de FTPS/SFTP ; à défaut, évaluer un remplacement. Dès qu'un protocole chiffré est disponible : l'activer, puis fermer TCP 21 en clair |
+| **Residual risk** | FTP remains in cleartext **between the gateway and the server** (VLAN 60) and between the server and Finance (F11). An attacker already present on the gateway or in the DMZ could read credentials and invoices. A compromised accountant workstation passes its booby-trapped files through the tunnel |
+| **Likelihood** | Low: the gateway or the DMZ must be compromised first, and both are hardened and logged |
+| **Impact** | High: financial data, FTP credentials |
+| **Compensating measures** | Encrypted tunnel over the Internet; FTP isolated in the DMZ with no outbound connection (F4); VPN access limited to the accounting group (F9, F10); chroot + allowlist; FTP and firewall logs; antivirus on uploads; FTP credentials distinct from any other password |
+| **Risk owner** | LogiCorp management (CEO), on the security team's recommendation |
+| **Review date** | 6 months after deployment, or immediately in case of an incident |
+| **Exit plan** | Ask the software vendor for FTPS/SFTP support; failing that, evaluate a replacement. As soon as an encrypted protocol is available: enable it, then close cleartext TCP 21 |
