@@ -51,14 +51,7 @@ def clean_data(lines: list) -> list:
 
 def validate_line(line: str) -> bool:
 
-    match = re.fullmatch(r"([^:]+):([^:]+)", line)
-
-    if not match:
-        return False
-
-    email = match.group(1)
-
-    if re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+    if re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+:([^:]+)", line):
         return True
     else:
         return False
