@@ -15,7 +15,6 @@ def main():
     print(args.verbose)
 
     content = read_file(args.file)
-    print(content)
 
 
 def read_file(filename: str) -> list:
