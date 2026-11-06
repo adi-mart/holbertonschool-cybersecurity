@@ -1,6 +1,5 @@
 import argparse
 
-
 def main():
 
     parser = argparse.ArgumentParser()
@@ -14,23 +13,35 @@ def main():
     print(args.output)
     print(args.verbose)
 
-    content = read_file(args.file)
-
+    content = clean_data(read_file(args.file))
+    print(content)
 
 def read_file(filename: str) -> list:
     path = filename
+    
     try:
         with open(filename, "r") as file:
             return file.readlines()
+
     except FileNotFoundError:
         print(f"[ERROR] File not found: {filename}")
+        return []
 
-    try:
-        with open("/etc/host", mode="w") as file:
-            return []
     except PermissionError:
         print(f"[ERROR] Permission denied: {path}")
+        return []
 
+def clean_data(lines: list) -> list:
+    cleaned_lines = []
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith("#"):
+            continue
+        cleaned_lines.append(line)
+    return cleaned_lines
 
 if __name__ == "__main__":
     main()
