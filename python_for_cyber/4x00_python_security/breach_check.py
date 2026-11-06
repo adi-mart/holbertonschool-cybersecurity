@@ -1,4 +1,5 @@
 import argparse
+import re
 
 def main():
 
@@ -15,6 +16,11 @@ def main():
 
     content = clean_data(read_file(args.file))
     print(content)
+    for line in content:
+      if validate_line(line):
+          print(f"[PASS] : {line}")
+      else:
+          print(f"[FAIL]: {line}")
 
 def read_file(filename: str) -> list:
     path = filename
@@ -42,6 +48,21 @@ def clean_data(lines: list) -> list:
             continue
         cleaned_lines.append(line)
     return cleaned_lines
+
+def validate_line(line: str) -> bool:
+
+    match = re.fullmatch(r"([^:]+):([^:]+)", line)
+
+    if not match:
+        return False
+
+    email = match.group(1)
+
+    if re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        return True
+    else:
+        return False
+
 
 if __name__ == "__main__":
     main()
