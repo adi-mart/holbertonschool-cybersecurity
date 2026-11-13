@@ -1,6 +1,7 @@
 import argparse
 import re
 import logging
+import hashlib
 
 console_handler = logging.StreamHandler()
 file_handler = logging.FileHandler("breach_check.log")
@@ -40,15 +41,22 @@ def main():
     logging.debug(content)
     for line in content:
         if validate_line(line):
-            status = check_policy(line)
+            email, password = line.split(":", 1)
 
-            if status == "WEAK":
-                logging.warning(f"[WEAK] : {line}")
-            else:
-                logging.info(f"[COMPLIANT] : {line}")
+        status = check_policy(password)
 
+        if status == "WEAK":
+            logging.warning(f"[WEAK] : {email}")
         else:
-            logging.warning(f"[FAIL]: {line}")
+            logging.info(f"[COMPLIANT] : {email}")
+
+        salt = "my_secret_salt"
+        hashed_password = hash_password(password, salt)
+
+        logging.debug(f"[HASH] : {email} -> {hashed_password}")
+
+    else:
+        logging.warning(f"[FAIL]: {line}")
 
 
 def read_file(filename: str) -> list:
@@ -101,6 +109,15 @@ def check_policy(password: str) -> str:
         return "WEAK"
 
     return "COMPLIANT"
+
+
+def hash_password(password: str, salt: str) -> str:
+    password_bytes = password.encode()
+    salt_bytes = salt.encode()
+
+    hashed = hashlib.sha256(password_bytes + salt_bytes)
+
+    return hashed.hexdigest()
 
 
 if __name__ == "__main__":
