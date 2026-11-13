@@ -126,7 +126,7 @@ def load_config():
     config = configparser.ConfigParser()
 
     if not config.read("config.ini"):
-        logging.error("[ERROR] Config file missing")
+        logging.error("[ERROR] config file missing")
         sys.exit(1)
 
     salt = config.get("SECURITY", "Salt")
