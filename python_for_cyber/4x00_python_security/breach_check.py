@@ -40,7 +40,13 @@ def main():
     logging.debug(content)
     for line in content:
         if validate_line(line):
-            logging.info(f"[PASS] : {line}")
+            status = check_policy(line)
+
+            if status == "WEAK":
+                logging.warning(f"[WEAK] : {line}")
+            else:
+                logging.info(f"[COMPLIANT] : {line}")
+
         else:
             logging.warning(f"[FAIL]: {line}")
 
@@ -80,6 +86,21 @@ def validate_line(line: str) -> bool:
         return True
     else:
         return False
+
+
+def check_policy(password: str) -> str:
+    common_passwords = ["password", "123456"]
+
+    if len(password) < 8:
+        return "WEAK"
+
+    if password.isalpha():
+        return "WEAK"
+
+    if password in common_passwords:
+        return "WEAK"
+
+    return "COMPLIANT"
 
 
 if __name__ == "__main__":
