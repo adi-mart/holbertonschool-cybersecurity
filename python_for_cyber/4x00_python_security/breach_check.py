@@ -2,6 +2,8 @@ import argparse
 import re
 import logging
 import hashlib
+import sys
+import configparser
 
 console_handler = logging.StreamHandler()
 file_handler = logging.FileHandler("breach_check.log")
@@ -25,6 +27,8 @@ logger.addHandler(file_handler)
 
 def main():
 
+    salt, min_length = load_config()
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--file', required=True)
@@ -43,20 +47,18 @@ def main():
         if validate_line(line):
             email, password = line.split(":", 1)
 
-        status = check_policy(password)
+            status = check_policy(password, min_length)
 
-        if status == "WEAK":
-            logging.warning(f"[WEAK] : {email}")
+            if status == "WEAK":
+                logging.warning(f"[WEAK] : {email}")
+            else:
+                logging.info(f"[COMPLIANT] : {email}")
+
+            hashed_password = hash_password(password, salt)
+            logging.debug(f"[HASH] : {email} -> {hashed_password}")
+
         else:
-            logging.info(f"[COMPLIANT] : {email}")
-
-        salt = "my_secret_salt"
-        hashed_password = hash_password(password, salt)
-
-        logging.debug(f"[HASH] : {email} -> {hashed_password}")
-
-    else:
-        logging.warning(f"[FAIL]: {line}")
+            logging.warning(f"[FAIL]: {line}")
 
 
 def read_file(filename: str) -> list:
@@ -96,10 +98,10 @@ def validate_line(line: str) -> bool:
         return False
 
 
-def check_policy(password: str) -> str:
+def check_policy(password: str, min_length: int) -> str:
     common_passwords = ["password", "123456"]
 
-    if len(password) < 8:
+    if len(password) < min_length:
         return "WEAK"
 
     if password.isalpha():
@@ -118,6 +120,19 @@ def hash_password(password: str, salt: str) -> str:
     hashed = hashlib.sha256(password_bytes + salt_bytes)
 
     return hashed.hexdigest()
+
+
+def load_config():
+    config = configparser.ConfigParser()
+
+    if not config.read("config.ini"):
+        logging.error("[ERROR] Config file missing")
+        sys.exit(1)
+
+    salt = config.get("SECURITY", "Salt")
+    min_length = config.getint("SECURITY", "MinLength")
+
+    return salt, min_length
 
 
 if __name__ == "__main__":
