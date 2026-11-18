@@ -1,9 +1,9 @@
 import argparse
-import re
 import logging
-import hashlib
 import sys
 import configparser
+
+from utils import clean_data, validate_line, hash_password
 
 console_handler = logging.StreamHandler()
 file_handler = logging.FileHandler("breach_check.log")
@@ -41,6 +41,9 @@ def main():
     logging.info(args.output)
     logging.info(args.verbose)
 
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
     content = clean_data(read_file(args.file))
     logging.debug(content)
     for line in content:
@@ -77,27 +80,6 @@ def read_file(filename: str) -> list:
         return []
 
 
-def clean_data(lines: list) -> list:
-    cleaned_lines = []
-
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-        if line.startswith("#"):
-            continue
-        cleaned_lines.append(line)
-    return cleaned_lines
-
-
-def validate_line(line: str) -> bool:
-
-    if re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+:([^:]+)", line):
-        return True
-    else:
-        return False
-
-
 def check_policy(password: str, min_length: int) -> str:
     common_passwords = ["password", "123456"]
 
@@ -111,15 +93,6 @@ def check_policy(password: str, min_length: int) -> str:
         return "WEAK"
 
     return "COMPLIANT"
-
-
-def hash_password(password: str, salt: str) -> str:
-    password_bytes = password.encode()
-    salt_bytes = salt.encode()
-
-    hashed = hashlib.sha256(password_bytes + salt_bytes)
-
-    return hashed.hexdigest()
 
 
 def load_config():
