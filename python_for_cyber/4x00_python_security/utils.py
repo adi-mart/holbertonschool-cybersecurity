@@ -3,8 +3,7 @@ import re
 import hashlib
 
 
-def clean_data(lines: list):
-    cleaned_lines = []
+def clean_data(lines):
 
     for line in lines:
         line = line.strip()
