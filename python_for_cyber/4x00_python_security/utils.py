@@ -2,6 +2,23 @@
 import re
 import hashlib
 
+from flask import logging
+
+
+def read_file(filename: str):
+    path = filename
+
+    try:
+        with open(filename, "r") as file:
+            for line in file:
+                yield line
+
+    except FileNotFoundError:
+        logging.error(f"File not found: {filename}")
+
+    except PermissionError:
+        logging.error(f"Permission denied: {path}")
+
 
 def clean_data(lines):
 

@@ -3,7 +3,7 @@ import logging
 import sys
 import configparser
 
-from utils import clean_data, validate_line, hash_password
+from utils import clean_data, validate_line, hash_password, read_file
 
 console_handler = logging.StreamHandler()
 file_handler = logging.FileHandler("breach_check.log")
@@ -62,21 +62,6 @@ def main():
 
         else:
             logging.warning(f"[FAIL]: {line}")
-
-
-def read_file(filename: str):
-    path = filename
-
-    try:
-        with open(filename, "r") as file:
-            for line in file:
-                yield line
-
-    except FileNotFoundError:
-        logging.error(f"File not found: {filename}")
-
-    except PermissionError:
-        logging.error(f"Permission denied: {path}")
 
 
 def check_policy(password: str, min_length: int) -> str:
