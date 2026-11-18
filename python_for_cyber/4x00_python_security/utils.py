@@ -3,7 +3,7 @@ import re
 import hashlib
 
 
-def clean_data(lines: list) -> list:
+def clean_data(lines: list):
     cleaned_lines = []
 
     for line in lines:
@@ -12,8 +12,7 @@ def clean_data(lines: list) -> list:
             continue
         if line.startswith("#"):
             continue
-        cleaned_lines.append(line)
-    return cleaned_lines
+        yield line
 
 
 def validate_line(line: str) -> bool:
