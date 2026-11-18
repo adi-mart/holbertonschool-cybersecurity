@@ -64,20 +64,19 @@ def main():
             logging.warning(f"[FAIL]: {line}")
 
 
-def read_file(filename: str) -> list:
+def read_file(filename: str):
     path = filename
 
     try:
         with open(filename, "r") as file:
-            return file.readlines()
+            for line in file:
+                yield line
 
     except FileNotFoundError:
         logging.error(f"File not found: {filename}")
-        return []
 
     except PermissionError:
         logging.error(f"Permission denied: {path}")
-        return []
 
 
 def check_policy(password: str, min_length: int) -> str:
