@@ -22,6 +22,7 @@ def main():
 
         if parsed:
             count += 1
+        return None
 
     logging.info(f"[*] Apache lines: {count}")
 
