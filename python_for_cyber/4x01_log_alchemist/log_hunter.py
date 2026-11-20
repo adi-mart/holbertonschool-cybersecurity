@@ -192,5 +192,6 @@ def main():
         f"({known_ip_count} known IPs)"
     )
 
+
 if __name__ == "__main__":
     main()
