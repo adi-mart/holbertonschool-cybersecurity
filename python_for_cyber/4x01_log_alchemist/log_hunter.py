@@ -75,12 +75,11 @@ def normalize_entry(parsed_dict, log_type, raw_line='') -> LogEntry:
 
 def filter_logs(stream, status_codes=[404, 500]):
 
-    for line in stream:
-        parsed = parse_apache_line(line)
-        if parsed:
-            status = int(parsed["status"])
-            if status in status_codes:
-                yield line
+    for entry in stream:
+        status = getattr(entry, 'status', None)
+
+        if status in status_codes:
+            yield entry
 
 
 def read_stream(file_path: str):
@@ -116,18 +115,21 @@ def parse_syslog_line(line: str) -> dict:
 
 def main():
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('file')
     args = parser.parse_args()
 
+    logging.info("[*] LogHunter - Log Analysis Engine")
     logging.info(f"[*] Reading: {args.file}")
 
     content = read_stream(args.file)
+
     apache_count = 0
     sys_count = 0
     total_count = 0
+    entries = []
 
     for line in content:
         parsed = parse_apache_line(line)
@@ -135,17 +137,31 @@ def main():
         if parsed:
             normalized = normalize_entry(parsed, "apache", line)
             if normalized:
+                entries.append(normalized)
                 apache_count += 1
                 total_count += 1
+
         else:
             parsed = parse_syslog_line(line)
-            if parsed:
-                sys_count += 1
-                total_count += 1
 
-    logging.info(f"[*] Apache lines: {apache_count}")
-    logging.info(f"[*] Syslog lines: {sys_count}")
-    logging.info(f"[*] Total lines: {total_count}")
+            if parsed:
+                normalized = normalize_entry(parsed, "syslog", line)
+                if normalized:
+                    entries.append(normalized)
+                    sys_count += 1
+                    total_count += 1
+
+    logging.info("--- Parsing ---")
+    logging.info(f"[*] Apache lines:  {apache_count}")
+    logging.info(f"[*] Syslog lines:  {sys_count}")
+    logging.info(f"[*] Total parsed:  {total_count}")
+
+    filtered_entries = list(filter_logs(entries))
+
+    logging.info("--- Filtering ---")
+    logging.info(
+        f"[*] Suspicious (404, 500): {len(filtered_entries)}"
+    )
 
 
 if __name__ == "__main__":
