@@ -17,6 +17,7 @@ class LogEntry:
     path: str = None
     status: int = None
     user_agent: str = None
+    country: str = "UNKNOWN"
 
 
 regex_ip = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b')
@@ -38,6 +39,16 @@ regex_syslog = re.compile(
     r'(?P<process>\S+): '
     r'(?P<message>.*)'
 )
+
+GEOIP_DB = {
+    '1.2.3.4': 'US',
+    '5.6.7.8': 'RU'
+}
+
+
+def enrich_ip(log_entry):
+    log_entry.country = GEOIP_DB.get(log_entry.ip, "UNKNOWN")
+    return log_entry
 
 
 def normalize_entry(parsed_dict, log_type, raw_line='') -> LogEntry:
