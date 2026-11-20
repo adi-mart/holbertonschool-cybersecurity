@@ -147,6 +147,7 @@ def main():
 
         if parsed:
             normalized = normalize_entry(parsed, "apache", line)
+
             if normalized:
                 entries.append(normalized)
                 apache_count += 1
@@ -157,6 +158,7 @@ def main():
 
             if parsed:
                 normalized = normalize_entry(parsed, "syslog", line)
+
                 if normalized:
                     entries.append(normalized)
                     sys_count += 1
@@ -167,6 +169,7 @@ def main():
     logging.info(f"[*] Syslog lines:  {sys_count}")
     logging.info(f"[*] Total parsed:  {total_count}")
 
+    # Filtering
     filtered_entries = list(filter_logs(entries))
 
     logging.info("--- Filtering ---")
@@ -174,6 +177,20 @@ def main():
         f"[*] Suspicious (404, 500): {len(filtered_entries)}"
     )
 
+    # Enrichment
+    known_ip_count = 0
+
+    for entry in entries:
+        enrich_ip(entry)
+
+        if entry.country != "UNKNOWN":
+            known_ip_count += 1
+
+    logging.info("--- Enrichment ---")
+    logging.info(
+        f"[*] GeoIP: {len(entries)} entries enriched "
+        f"({known_ip_count} known IPs)"
+    )
 
 if __name__ == "__main__":
     main()
