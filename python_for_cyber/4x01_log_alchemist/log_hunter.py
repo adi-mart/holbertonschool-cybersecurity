@@ -41,9 +41,9 @@ def read_stream(file_path: str):
 
 regex_apache = re.compile(
     r'(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) '
-    r'- - '
+    r'\S+ \S+ '
     r'\[(?P<date>\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}\s[+-]\d{4})\] '
-    r'"(?P<method>GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH) '
+    r'"(?P<method>[A-Z]+) '
     r'(?P<path>\S+) '
     r'HTTP/\d\.\d" '
     r'(?P<status>\d{3}) '
