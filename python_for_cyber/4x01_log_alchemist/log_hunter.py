@@ -21,6 +21,24 @@ class LogEntry:
 
 regex_ip = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b')
 
+regex_apache = re.compile(
+    r'(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) '
+    r'\S+ \S+ '
+    r'\[(?P<date>\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}\s[+-]\d{4})\] '
+    r'"(?P<method>[A-Z]+) '
+    r'(?P<path>\S+) '
+    r'HTTP/\d\.\d" '
+    r'(?P<status>\d{3}) '
+    r'(?P<size>\d+|-)'
+)
+
+regex_syslog = re.compile(
+    r'(?P<date>[A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}) '
+    r'(?P<host>\S+) '
+    r'(?P<process>\S+): '
+    r'(?P<message>.*)'
+)
+
 
 def normalize_entry(parsed_dict, log_type, raw_line='') -> LogEntry:
 
@@ -55,23 +73,14 @@ def normalize_entry(parsed_dict, log_type, raw_line='') -> LogEntry:
     return None
 
 
-regex_apache = re.compile(
-    r'(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) '
-    r'\S+ \S+ '
-    r'\[(?P<date>\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}\s[+-]\d{4})\] '
-    r'"(?P<method>[A-Z]+) '
-    r'(?P<path>\S+) '
-    r'HTTP/\d\.\d" '
-    r'(?P<status>\d{3}) '
-    r'(?P<size>\d+|-)'
-)
+def filter_logs(stream, status_codes=[404, 500]):
 
-regex_syslog = re.compile(
-    r'(?P<date>[A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}) '
-    r'(?P<host>\S+) '
-    r'(?P<process>\S+): '
-    r'(?P<message>.*)'
-)
+    for line in stream:
+        parsed = parse_apache_line(line)
+        if parsed:
+            status = int(parsed["status"])
+            if status in status_codes:
+                yield line
 
 
 def read_stream(file_path: str):
