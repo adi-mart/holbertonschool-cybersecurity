@@ -15,17 +15,25 @@ def main():
     logging.info(f"[*] Reading: {args.file}")
 
     content = read_stream(args.file)
-    count = 0
+    apache_count = 0
+    sys_count = 0
+    total_count = 0
 
     for line in content:
         parsed = parse_apache_line(line)
 
         if parsed:
-            count += 1
+            apache_count += 1
+            total_count += 1
         else:
-            return None
+            parsed = parse_syslog_line(line)
+            if parsed:
+                sys_count += 1
+                total_count += 1
 
-    logging.info(f"[*] Apache lines: {count}")
+    logging.info(f"[*] Apache lines: {apache_count}")
+    logging.info(f"[*] Syslog lines: {sys_count}")
+    logging.info(f"[*] Total lines: {total_count}")
 
 
 def read_stream(file_path: str):
@@ -54,6 +62,24 @@ regex_apache = re.compile(
 def parse_apache_line(line: str) -> dict:
 
     match = regex_apache.search(line)
+
+    if not match:
+        return None
+
+    return match.groupdict()
+
+
+regex_syslog = re.compile(
+    r'(?P<date>[A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}) '
+    r'(?P<host>\S+) '
+    r'(?P<process>\S+): '
+    r'(?P<message>.*)'
+)
+
+
+def parse_syslog_line(line: str) -> dict:
+
+    match = regex_syslog.search(line)
 
     if not match:
         return None
