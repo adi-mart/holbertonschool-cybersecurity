@@ -16,9 +16,7 @@ class LogEntry:
     method: str = None
     path: str = None
     status: int = None
-    user_agent: str = None
-    country: str = "UNKNOWN"
-
+    size: int = None
     user_agent: str = None
     country: str = "UNKNOWN"
     is_bot: bool = False
