@@ -9,9 +9,9 @@ from dataclasses import dataclass
 class LogEntry:
     ip: str
     timestamp: str
-    service: str
     message: str
     raw_line: str
+    service: str = ""
     source: str = ""
 
     method: str = None
