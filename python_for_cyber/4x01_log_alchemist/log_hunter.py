@@ -4,7 +4,7 @@ import json
 import logging
 from collections import Counter, defaultdict, deque
 from datetime import datetime
-from multiprocessing import Pool
+import multiprocessing
 import re
 from dataclasses import asdict, dataclass
 
@@ -285,7 +285,7 @@ def parallel_analyze(file_path, num_workers, chunk_size):
     if not chunks:
         return []
 
-    with Pool(processes=num_workers) as pool:
+    with multiprocessing.Pool(processes=num_workers) as pool:
         mapped = pool.map(process_chunk, chunks)
 
     return [entry for chunk_entries in mapped for entry in chunk_entries]
