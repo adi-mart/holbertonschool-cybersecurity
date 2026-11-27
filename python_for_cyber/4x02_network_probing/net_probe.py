@@ -22,7 +22,6 @@ def scan_ports(ip: str, start_port: int, end_port: int) -> list:
     return results
 
 
-
 def get_banner(ip: str, port: int) -> str:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(2)
