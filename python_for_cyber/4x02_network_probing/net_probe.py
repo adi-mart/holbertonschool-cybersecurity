@@ -10,8 +10,12 @@ def get_banner(ip: str, port: int) -> str:
         sock.connect((ip, port))
         sock.sendall(b"HEAD / HTTP/1.0\r\n\r\n")
 
-        banner = sock.recv(1024)
-        return banner.decode(errors="ignore").strip()
+        banner = sock.recv(1024).decode(errors="ignore").strip()
+
+        if not banner:
+            return "Unknown"
+
+        return banner
 
     except OSError:
         return "Unknown"
