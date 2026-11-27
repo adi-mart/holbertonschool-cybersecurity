@@ -4,11 +4,39 @@ from concurrent.futures import ThreadPoolExecutor
 import time
 
 
+def guess_service(port: int) -> str:
+    common_services = {
+        20: "ftp-data",
+        21: "ftp",
+        22: "ssh",
+        23: "telnet",
+        25: "smtp",
+        53: "dns",
+        67: "dhcp",
+        68: "dhcp",
+        80: "http",
+        110: "pop3",
+        123: "ntp",
+        143: "imap",
+        161: "snmp",
+        389: "ldap",
+        443: "https",
+        445: "smb",
+        3306: "mysql",
+        3389: "rdp",
+        5432: "postgresql",
+        6379: "redis",
+        8080: "http-alt",
+    }
+    return common_services.get(port, "unknown")
+
+
 def scan_one(ip, port):
     if check_port(ip, port):
         banner = get_banner(ip, port)
+        service = guess_service(port) if banner == "Unknown" else banner
         print(f"[+] Port {port} Open: {banner}")
-        return {"port": port, "service": banner}
+        return {"port": port, "service": service}
 
 
 def scan_ports(ip, start_port, end_port):
