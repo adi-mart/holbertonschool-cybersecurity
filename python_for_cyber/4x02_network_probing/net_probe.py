@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import socket
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 
 
 def scan_ports(ip: str, start_port: int, end_port: int) -> list:
@@ -7,18 +9,27 @@ def scan_ports(ip: str, start_port: int, end_port: int) -> list:
 
     print(f"Scanning {ip} from {start_port} to {end_port}...")
 
-    for port in range(start_port, end_port + 1):
-        if check_port(ip, port):
-            banner = get_banner(ip, port)
+    with ThreadPoolExecutor(max_workers=50) as executor:
+        futures = {
+            executor.submit(check_port, ip, port): port
+            for port in range(start_port, end_port + 1)
+        }
 
-            result = {
-                "port": port,
-                "service": banner
-            }
+        for future in as_completed(futures):
+            port = futures[future]
 
-            results.append(result)
-            print(f"[+] Port {port} Open: {banner}")
+            if future.result():
+                banner = get_banner(ip, port)
 
+                result = {
+                    "port": port,
+                    "service": banner
+                }
+
+                results.append(result)
+                print(f"[+] Port {port} Open: {banner}")
+
+    results.sort(key=lambda result: result["port"])
     return results
 
 
@@ -75,7 +86,10 @@ def main():
     print(f"Port 81 is open: {check_port('google.com', 81)}")
     print(ping_sweep("192.168.1"))
     print(get_banner("scanme.nmap.org", 22))
-    print(scan_ports("192.168.1.1", 20, 80))
+    start = time.time()
+    results = scan_ports("192.168.1.1", 1, 1024)
+    end = time.time()
+    print(f"Scan completed in {end - start:.2f} seconds")
 
 
 if __name__ == "__main__":
