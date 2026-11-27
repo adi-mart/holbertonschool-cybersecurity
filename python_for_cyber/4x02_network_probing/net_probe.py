@@ -1,36 +1,23 @@
 #!/usr/bin/env python3
 import socket
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 import time
 
 
-def scan_ports(ip: str, start_port: int, end_port: int) -> list:
-    results = []
+def scan_one(ip, port):
+    if check_port(ip, port):
+        banner = get_banner(ip, port)
+        print(f"[+] Port {port} Open: {banner}")
+        return {"port": port, "service": banner}
 
+
+def scan_ports(ip, start_port, end_port):
     print(f"Scanning {ip} from {start_port} to {end_port}...")
-
-    with ThreadPoolExecutor(max_workers=50) as executor:
-        futures = {
-            executor.submit(check_port, ip, port): port
-            for port in range(start_port, end_port + 1)
-        }
-
-        for future in as_completed(futures):
-            port = futures[future]
-
-            if future.result():
-                banner = get_banner(ip, port)
-
-                result = {
-                    "port": port,
-                    "service": banner
-                }
-
-                results.append(result)
-                print(f"[+] Port {port} Open: {banner}")
-
-    results.sort(key=lambda result: result["port"])
-    return results
+    with ThreadPoolExecutor(max_workers=50) as ex:
+        results = ex.map(
+            lambda p: scan_one(ip, p), range(start_port, end_port + 1)
+        )
+        return [r for r in results if r]
 
 
 def get_banner(ip: str, port: int) -> str:
