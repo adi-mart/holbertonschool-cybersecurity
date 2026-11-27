@@ -33,6 +33,7 @@ regex_apache = re.compile(
     r'HTTP/\d\.\d" '
     r'(?P<status>\d{3}) '
     r'(?P<size>\d+|-)'
+    r'(?: "(?P<referer>[^"]*)" "(?P<user_agent>[^"]*)")?'
 )
 
 regex_syslog = re.compile(
