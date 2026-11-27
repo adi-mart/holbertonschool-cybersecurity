@@ -43,6 +43,14 @@ regex_apache = re.compile(
     r'(?: "(?P<referer>[^"]*)" "(?P<user_agent>[^"]*)")?'
 )
 
+# Less strict apache fallback for fixtures with optional timezone
+# or atypical request formatting.
+regex_apache_fallback = re.compile(
+    r'(?P<ip>\d{1,3}(?:\.\d{1,3}){3})\s+\S+\s+\S+\s+'
+    r'\[(?P<date>[^\]]+)\]\s+"(?P<request>[^"]+)"\s+'
+    r'(?P<status>\d{3})\s+(?P<size>\d+|-)',
+)
+
 regex_syslog = re.compile(
     r'(?P<date>[A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}) '
     r'(?P<host>\S+) '
@@ -371,7 +379,22 @@ def parse_apache_line(line: str) -> dict:
     match = regex_apache.search(line)
 
     if not match:
-        return None
+        fallback = regex_apache_fallback.search(line)
+        if not fallback:
+            return None
+
+        data = fallback.groupdict()
+        request = data.pop('request')
+        req_match = re.match(
+            r'(?P<method>[A-Za-z]+)\s+(?P<path>\S+)(?:\s+HTTP/\d(?:\.\d)?)?',
+            request
+        )
+        if not req_match:
+            return None
+
+        data.update(req_match.groupdict())
+        data.setdefault('user_agent', None)
+        return data
 
     return match.groupdict()
 
