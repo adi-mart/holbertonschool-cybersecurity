@@ -21,6 +21,7 @@ class LogEntry:
     user_agent: str = None
     country: str = "UNKNOWN"
     is_bot: bool = False
+    alert_level: str = "LOW"
 
 
 regex_ip = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b')
@@ -51,6 +52,14 @@ GEOIP_DB = {
 
 
 BOT_SIGNATURES = ("sqlmap", "nikto", "curl", "python")
+BLACKLIST = {'10.0.0.1', '192.168.1.66'}
+
+
+def check_threat_intel(log_entry):
+    if log_entry.ip in BLACKLIST:
+        log_entry.alert_level = 'HIGH'
+    else:
+        log_entry.alert_level = 'LOW'
 
 
 def analyze_user_agent(log_entry):
@@ -216,6 +225,20 @@ def main():
         f"({known_ip_count} known IPs)"
     )
     logging.info(f"[*] Bots detected: {bot_count}")
+
+    # Threat Intelligence
+    high_count = 0
+
+    for entry in entries:
+        check_threat_intel(entry)
+
+        if entry.alert_level == 'HIGH':
+            high_count += 1
+
+    logging.info("--- Threat Intelligence ---")
+    logging.info(
+        f"[*] HIGH alerts: {high_count} entries from blacklisted IPs"
+    )
 
 
 if __name__ == "__main__":
