@@ -33,7 +33,6 @@ regex_apache = re.compile(
     r'HTTP/\d\.\d" '
     r'(?P<status>\d{3}) '
     r'(?P<size>\d+|-)'
-    r'(?: "(?P<referer>[^"]*)" "(?P<user_agent>[^"]*)")?'
 )
 
 regex_syslog = re.compile(
@@ -53,17 +52,13 @@ BOT_SIGNATURES = ("sqlmap", "nikto", "curl", "python")
 
 
 def analyze_user_agent(log_entry):
+    log_entry.is_bot = False
+
     for field in ("user_agent", "message", "raw_line"):
         value = getattr(log_entry, field, None)
-        if not value:
-            continue
-        value = str(value).lower()
-        if any(sig in value for sig in BOT_SIGNATURES):
+        if value and any(sig in value.lower() for sig in BOT_SIGNATURES):
             log_entry.is_bot = True
-            return log_entry
-
-    log_entry.is_bot = False
-    return log_entry
+            break
 
 
 def enrich_ip(log_entry):
@@ -161,25 +156,6 @@ def main():
     sys_count = 0
     total_count = 0
     entries = []
-    known_ip_count = 0
-    bot_count = 0
-
-    for entry in entries:
-        enrich_ip(entry)
-        analyze_user_agent(entry)
-
-        if entry.country != "UNKNOWN":
-            known_ip_count += 1
-
-        if entry.is_bot:
-            bot_count += 1
-
-    logging.info("--- Enrichment ---")
-    logging.info(
-        f"[*] GeoIP: {len(entries)} entries enriched "
-        f"({known_ip_count} known IPs)"
-    )
-    logging.info(f"[*] Bots detected: {bot_count}")
 
     for line in content:
         parsed = parse_apache_line(line)
@@ -218,18 +194,24 @@ def main():
 
     # Enrichment
     known_ip_count = 0
+    bot_count = 0
 
     for entry in entries:
         enrich_ip(entry)
+        analyze_user_agent(entry)
 
         if entry.country != "UNKNOWN":
             known_ip_count += 1
+
+        if entry.is_bot:
+            bot_count += 1
 
     logging.info("--- Enrichment ---")
     logging.info(
         f"[*] GeoIP: {len(entries)} entries enriched "
         f"({known_ip_count} known IPs)"
     )
+    logging.info(f"[*] Bots detected: {bot_count}")
 
 
 if __name__ == "__main__":
