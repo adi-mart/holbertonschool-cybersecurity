@@ -12,6 +12,7 @@ class LogEntry:
     service: str
     message: str
     raw_line: str
+    source: str = ""
 
     method: str = None
     path: str = None
@@ -74,6 +75,7 @@ def normalize_entry(parsed_dict, log_type, raw_line='') -> LogEntry:
             ip=parsed_dict["ip"],
             timestamp=parsed_dict["date"],
             service="http",
+            source="apache",
             message=(
                 f'{parsed_dict["method"]} {parsed_dict["path"]} '
                 f'-> {parsed_dict["status"]}'
@@ -93,6 +95,7 @@ def normalize_entry(parsed_dict, log_type, raw_line='') -> LogEntry:
             ip=ip,
             timestamp=parsed_dict["date"],
             service="ssh",
+            source="syslog",
             message=parsed_dict["message"],
             raw_line=raw_line.strip()
         )
