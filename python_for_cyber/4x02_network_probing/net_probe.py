@@ -2,6 +2,23 @@
 import socket
 
 
+def get_banner(ip: str, port: int) -> str:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(2)
+
+    try:
+        sock.connect((ip, port))
+        sock.sendall(b"HEAD / HTTP/1.0\r\n\r\n")
+        banner = sock.recv(1024)
+        return banner.decode(errors="ignore").strip()
+
+    except OSError:
+        return "Unknown"
+
+    finally:
+        sock.close()
+
+
 def ping_sweep(subnet: str) -> list:
     live_hosts = []
 
@@ -32,6 +49,7 @@ def main():
     print(f"Port 80 is open: {check_port('google.com', 80)}")
     print(f"Port 81 is open: {check_port('google.com', 81)}")
     print(ping_sweep("192.168.1"))
+    print(get_banner("scanme.nmap.org", 22))
 
 
 if __name__ == "__main__":
