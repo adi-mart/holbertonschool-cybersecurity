@@ -247,6 +247,26 @@ def process_line(line):
         normalized = normalize_entry(parsed, "syslog", line)
         return normalized
 
+    # Accept simplified syslog lines used in some fixtures, where the
+    # hostname/process segment may be missing or inconsistent.
+    fallback = re.match(
+        r'(?P<date>[A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(?P<rest>.*)',
+        line.strip()
+    )
+    if fallback:
+        rest = fallback.group('rest')
+        message = rest.split(': ', 1)[1] if ': ' in rest else rest
+        ip_match = regex_ip.search(line)
+        ip = ip_match.group() if ip_match else ""
+        return LogEntry(
+            ip=ip,
+            timestamp=fallback.group('date'),
+            message=message,
+            raw_line=line.strip(),
+            service="ssh",
+            source="syslog"
+        )
+
     return None
 
 
