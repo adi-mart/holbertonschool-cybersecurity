@@ -2,6 +2,27 @@
 import socket
 
 
+def scan_ports(ip: str, start_port: int, end_port: int) -> list:
+    results = []
+
+    print(f"Scanning {ip} from {start_port} to {end_port}...")
+
+    for port in range(start_port, end_port + 1):
+        if check_port(ip, port):
+            banner = get_banner(ip, port)
+
+            result = {
+                "port": port,
+                "service": banner
+            }
+
+            results.append(result)
+            print(f"[+] Port {port} Open: {banner}")
+
+    return results
+
+
+
 def get_banner(ip: str, port: int) -> str:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(2)
@@ -55,6 +76,7 @@ def main():
     print(f"Port 81 is open: {check_port('google.com', 81)}")
     print(ping_sweep("192.168.1"))
     print(get_banner("scanme.nmap.org", 22))
+    print(scan_ports("192.168.1.1", 20, 80))
 
 
 if __name__ == "__main__":
