@@ -191,22 +191,30 @@ def correlate_events(entries):
     state_by_ip = defaultdict(set)
 
     for entry in entries:
-        if not entry.ip:
+        ip = getattr(entry, 'ip', '')
+        if not ip:
             continue
 
-        if entry.status == 404:
-            state_by_ip[entry.ip].add('scanner')
+        status_value = str(getattr(entry, 'status', '')).strip()
+        if status_value == '404':
+            state_by_ip[ip].add('scanner')
 
-        if entry.attack_type == 'SQLi':
-            state_by_ip[entry.ip].add('sqli')
+        attack_type = getattr(entry, 'attack_type', None)
+        if attack_type is None:
+            attack_type = getattr(entry, 'attacktype', None)
 
-        if {'scanner', 'sqli'}.issubset(state_by_ip[entry.ip]):
+        attack_value = (str(attack_type).strip().lower() if attack_type
+                        else "")
+        if attack_value == 'sqli':
+            state_by_ip[ip].add('sqli')
+
+        if {'scanner', 'sqli'}.issubset(state_by_ip[ip]):
             yield {
-                'ip': entry.ip,
+                'ip': ip,
                 'stages': ['scanner', 'sqli'],
                 'alert_type': 'CRITICAL INCIDENT'
             }
-            state_by_ip[entry.ip].clear()
+            state_by_ip[ip].clear()
 
 
 def export_report(alerts, filename, format='json'):
