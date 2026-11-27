@@ -162,7 +162,12 @@ def detect_burst(entries, window_seconds=60, threshold=10):
         if ts is not None and entry.ip:
             stamped_entries.append((ts, index, entry))
 
-    for ts, _, entry in sorted(stamped_entries, key=lambda item: (item[0], item[1])):
+    ordered_entries = sorted(
+        stamped_entries,
+        key=lambda item: (item[0], item[1])
+    )
+
+    for ts, _, entry in ordered_entries:
         window = per_ip_windows[entry.ip]
         window.append(ts)
 
@@ -363,7 +368,10 @@ def main():
 
     logging.info("[*] LogHunter - Log Analysis Engine")
     if args.workers > 0:
-        logging.info(f"[*] Reading: {args.file} (parallel: {args.workers} workers)")
+        logging.info(
+            f"[*] Reading: {args.file} "
+            f"(parallel: {args.workers} workers)"
+        )
         entries = parallel_analyze(args.file, args.workers, args.chunk_size)
     else:
         logging.info(f"[*] Reading: {args.file}")
